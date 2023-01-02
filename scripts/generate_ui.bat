@@ -1,0 +1,1 @@
+py -m PyQt5.uic.pyuic -x resources/ui/mainwindow.ui -o source/ui/mainwindow.py
