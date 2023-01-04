@@ -1,81 +1,59 @@
-import sqlite3
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from models.exchange_rate import ExchangeRate
+import time
+
 import os
 
 class DbHandler():
-    _db_path = os.path.dirname(os.path.realpath(__file__)).replace("\\","/") + "/../../sqlite/crypto-prices.db"
-    _crypto_prices_table_title = "crypto_prices"
-    _prices_table_from = "from_currency"
-    _prices_table_to = "to_currency"
-    _prices_table_price = "price"
-    _prices_table_time = "time"
-    _prices_table_id = "id"
-    def is_connected(self):
-
-        try:
-            self._connection.cursor()
-            return True
-        except Exception:
-            return False
-    def connect(self):
-        if(not self.is_connected()):
-            print(f"Path of the database: {self._db_path}.")
-            self._connection = sqlite3.connect(self._db_path)
-            self._connection.row_factory = sqlite3.Row
-            print(f"Successfully connected to database {self._db_path}")
-        else:
-            print("Already connected to the database.")
-    def disconnect(self):
-        #Eplicitly close connection
-        self._connection.close()
-    def post_price(self, from_currency,to_currency, price):
-        if(not self.is_connected()):
-            print("Not connected to the database")
-            return None
-
-        post_query = f"""
-        INSERT INTO
-        {self._crypto_prices_table_title} ({self._prices_table_from},
-        {self._prices_table_to}, {self._prices_table_price}, {self._prices_table_time})
-        VALUES ('{from_currency}','{to_currency}',{price}, strftime ('%s', 'now'))
+    """
+    A class used to handle database operations.
+    """
+    
+    def __init__(self):
+        """Constructor of the DbHandler class."""
+        self._db_path = os.path.dirname(os.path.realpath(__file__)).replace(
+            "\\", "/") + "/../../sqlite/crypto-prices.db"
+        self._exchange_rate_table_title = "exchange_rates"
+        self._engine = create_engine(
+            "sqlite+pysqlite:///"+self._db_path, echo=False)
+        self._session = Session(self._engine)  
+        
+    def post_rate(self, from_currency, to_currency, exchange_rate):
         """
+        Posts a new exchange rate entry to the exchange_rates table.
+        Parameters
+        ----------
+        from_currency : str
+            The short title of the source currency. For example BTC.
+        to_currency : str
+            The short title of the destionation currency. For example USDT.
+        exchange_rate : int
+            The exchange rate between the source currency and the destination currency. For example 16.860.04 if 1 BTC = 16.860.04 USDT.
+        """
+        new_rate = ExchangeRate(from_currency=from_currency, to_currency=to_currency, exchange_rate=exchange_rate, time=time.time())
+        self._session.add(new_rate)
+        self._session.commit()
+        print(
+            f"Successfully recorded a new row into {self._exchange_rate_table_title}")
 
-        cur = self._connection.cursor()
-        cur.execute(post_query)
-        self._connection.commit()
-        print(f"Successfully recorded a new row into {self._crypto_prices_table_title}")
-    def get_all_prices(self):
-        if(not self.is_connected()):
-            print("Not connected to the database")
-            return []
-
-        cur = self._connection.cursor()
-        get_query = f"SELECT * FROM {self._crypto_prices_table_title}"
-        cur.execute(get_query)
-        rows = cur.fetchall()
-        prices = [[],[]]
-        for row in rows:
-            prices[0].append(row['time'])
-            prices[1].append(row['price'])
-        return prices
+    def get_all_rates(self):
+        """
+        Gets all exchange rates from the exchange_rates table.
+        """
+        exchange_rates = [[],[]]
+        for instance in self._session.query(ExchangeRate).order_by(ExchangeRate.id):
+            exchange_rates[0].append(instance.time)
+            exchange_rates[1].append(instance.exchange_rate)
+        return exchange_rates
     def get_last_request_time(self):
-        if (not self.is_connected()):
-            print("Not connected to the database")
-            return []
+        """
+        Gets the last request time in UTC seconds.
+        """
+        last_time = self._session.query(ExchangeRate.time).order_by(ExchangeRate.time).first()
 
-        cur = self._connection.cursor()
-        get_query = f'''
-        SELECT *
-        FROM {self._crypto_prices_table_title}
-        ORDER BY time DESC
-        LIMIT 1
-        '''
-        cur.execute(get_query)
-        rows = cur.fetchall()
-        if(rows.__len__()==0):
-            print("The database contains no entries.")
-        elif(rows.__len__()>1):
-            print("Unexpected number of entries received.")
+        if(last_time):
+            return last_time[0]
         else:
-            #Only one row
-            row = rows[0]
-            print(row[self._prices_table_time])
+            print("The database contains no entries.")
+            return None
