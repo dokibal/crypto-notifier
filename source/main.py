@@ -8,22 +8,19 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         super(ApplicationWindow, self).__init__()
 
         self.db_handler = DbHandler()
-        self.db_handler.connect()
 
         self.ui = Ui_CryptoWindow()
         self.ui.setupUi(self)
         
         sc = self.ui.graph
-        prices = self.get_points()
-
-        print(prices)
-        sc.axes.plot(prices[0],prices[1])
+        exchange_rates = self.get_points()
+        sc.axes.plot(exchange_rates[0],exchange_rates[1])
         self.setCentralWidget(sc)
         self.show()
 
     def get_points(self):
-        prices = self.db_handler.get_all_prices()
-        return prices
+        exchange_rates = self.db_handler.get_all_rates()
+        return exchange_rates
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
