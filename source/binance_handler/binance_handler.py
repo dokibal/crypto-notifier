@@ -1,30 +1,30 @@
 # Import libraries
 import requests
-import sqlite
-import time
-import sys
-from source.database.dbhandler import DbHandler
-
 
 class BinanceHandler:
-    _base_endpoint = "https://api.binance.com"
-    _price_endpoint = _base_endpoint + "/api/v3/ticker/price?symbol="
-
+    """
+    Class used to handle Binance API calls.
+    """
     def __init__(self):
-        db_handler = DbHandler()
-        db_handler.connect()
+        """
+        Constructor of the BinanceHandler class.
+        """
+        self._base_endpoint = "https://api.binance.com"
+        self._price_endpoint = self._base_endpoint + "/api/v3/ticker/price?symbol="
 
     def get_price(self, from_currency, to_currency):
+        """
+        Gets the exchange rate between two currencies.
+        Parameters
+        ----------
+        from_currency : str
+            The symbol of the source currency for example BTC.
+        to_currency : str
+            The symbol of the destination currency for example USDT.
+        """
         endpoint_with_symbol = self._price_endpoint+from_currency+to_currency
-        data = requests.get(endpoint_with_symbol)
+        raw_data = requests.get(endpoint_with_symbol)
         # requesting data from url
-        data = data.json()
+        data = raw_data.json()
         print(data)
-    def get_prices(self):
-        self.get_price("BTC","USDT")
-
-    def process(self):
-        self.get_prices()
-
-binance_handler = BinanceHandler()
-binance_handler.process()
+        return data.get('price',None)

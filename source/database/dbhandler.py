@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from models.exchange_rate import ExchangeRate
-import time
 
 import os
 
@@ -19,20 +18,15 @@ class DbHandler():
             "sqlite+pysqlite:///"+self._db_path, echo=False)
         self._session = Session(self._engine)  
         
-    def post_rate(self, from_currency, to_currency, exchange_rate):
+    def post_rate(self, exchange_rate):
         """
         Posts a new exchange rate entry to the exchange_rates table.
         Parameters
         ----------
-        from_currency : str
-            The short title of the source currency. For example BTC.
-        to_currency : str
-            The short title of the destionation currency. For example USDT.
-        exchange_rate : int
-            The exchange rate between the source currency and the destination currency. For example 16.860.04 if 1 BTC = 16.860.04 USDT.
+        exchange_rate : ExchangeRate
+            The exchange rate object to be posted.
         """
-        new_rate = ExchangeRate(from_currency=from_currency, to_currency=to_currency, exchange_rate=exchange_rate, time=time.time())
-        self._session.add(new_rate)
+        self._session.add(exchange_rate)
         self._session.commit()
         print(
             f"Successfully recorded a new row into {self._exchange_rate_table_title}")
@@ -41,11 +35,19 @@ class DbHandler():
         """
         Gets all exchange rates from the exchange_rates table.
         """
-        exchange_rates = [[],[]]
-        for instance in self._session.query(ExchangeRate).order_by(ExchangeRate.id):
-            exchange_rates[0].append(instance.time)
-            exchange_rates[1].append(instance.exchange_rate)
-        return exchange_rates
+        return self._session.query(ExchangeRate).order_by(ExchangeRate.id).all()
+    
+    def get_rates_by_currencies(self, from_currency, to_currency):
+        """
+        Gets all exchange rates between specified currencies.
+        """
+        return (self._session.query(ExchangeRate)
+        .order_by(ExchangeRate.id)
+        .filter(ExchangeRate.from_currency==from_currency)
+        .filter(ExchangeRate.to_currency==to_currency)
+        .all()
+        )
+        
     def get_last_request_time(self):
         """
         Gets the last request time in UTC seconds.
