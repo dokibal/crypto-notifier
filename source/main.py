@@ -15,10 +15,14 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         
         sc = self.ui.graph
-        exchange_rates = self.db_handler.get_all_rates()
+        exchange_rates = self.get_points()
         sc.axes.plot(exchange_rates[0],exchange_rates[1])
         self.setCentralWidget(sc)
         self.show()
+
+    def get_points(self):
+        exchange_rates = self.db_handler.get_all_rates()
+        return exchange_rates
 
 def main():
     """
